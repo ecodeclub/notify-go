@@ -18,9 +18,9 @@ func NewTargetService() ITargetService {
 
 func (ts *Service) GetTarget(ctx context.Context, targetId int64) []task.Receiver {
 	targets := []task.Receiver{
-		{Id: 111},
-		{Email: "ch_hakun@163.com"},
-		{Phone: "+8618800187099"},
+		{Id: "1111"},
+		{Email: "xxx@163.com"},
+		{Phone: "+8618800000000"},
 	}
 	return targets
 }

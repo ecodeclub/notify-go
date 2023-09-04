@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/BurntSushi/toml"
+	"log"
 
 	"github.com/ecodeclub/notify-go/internal/content"
 	"github.com/ecodeclub/notify-go/internal/pkg/mq"
@@ -12,7 +14,10 @@ import (
 	"github.com/ecodeclub/notify-go/internal/target"
 )
 
-var engine = mysql.NewEngine(mysql.DBConfig{DriverName: "", Dsn: ""})
+var (
+	engine   = mysql.NewEngine(mysql.DBConfig{DriverName: "", Dsn: ""})
+	kafkaCfg = mq.KafkaConfig{}
+)
 
 func serve() {
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -22,8 +27,14 @@ func serve() {
 	emailExecutor := sender.NewEmailHandler(sender.EmailConfig{Addr: "", Auth: nil})
 	t := task.NewTask(emailExecutor)
 
+	// 读取kafka配置
+	_, err := toml.DecodeFile("./conf/kafka.toml", &kafkaCfg)
+	if err != nil {
+		log.Fatal("kafka配置读取失败")
+	}
+
 	// 启动邮件发送的消费者
-	qSrv := mq.NewQueueService()
+	qSrv := mq.NewQueueService(kafkaCfg)
 	qSrv.Consume(ctx, "email", &t)
 }
 
@@ -33,7 +44,7 @@ func main() {
 
 	// 发送邮件
 	sendSrv := send.NewSendService(
-		mq.NewQueueService(),
+		mq.NewQueueService(kafkaCfg),
 		mysql.NewINotifyGoDAO(engine),
 	)
 
