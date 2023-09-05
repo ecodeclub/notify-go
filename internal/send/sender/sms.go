@@ -22,7 +22,7 @@ func (fh *SmsHandler) Name() string {
 	return SmsNAME
 }
 
-func (fh *SmsHandler) Execute(ctx context.Context, taskDetail task.Detail) error {
+func (fh *SmsHandler) Execute(ctx context.Context, taskDetail task.Message) error {
 	if taskDetail.SendChannel != "sms" {
 		return nil
 	}

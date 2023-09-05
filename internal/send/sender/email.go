@@ -32,7 +32,7 @@ func (eh *EmailHandler) Name() string {
 	return EmailNAME
 }
 
-func (eh *EmailHandler) Execute(ctx context.Context, taskDetail task.Detail) error {
+func (eh *EmailHandler) Execute(ctx context.Context, taskDetail task.Message) error {
 	var (
 		tos []string
 		ccs []string

@@ -1,30 +1,10 @@
 package task
 
-import "context"
-
-type Task struct {
-	TaskInfo Detail
-	Executor
-}
-
-type Executor interface {
-	Name() string
-	Execute(ctx context.Context, taskDetail Detail) error
-}
-
-type Detail struct {
-	TaskId      int64          `json:"task_id"`
+type Message struct {
+	Id          int64          `json:"id"`
 	SendChannel string         `json:"send_channel"` // 消息渠道，比如是短信、邮件、推送等
 	MsgContent  MessageContent `json:"msg_content"`
 	MsgReceiver Receiver       `json:"msg_receiver"`
-}
-
-type Receiver struct {
-	Id       string
-	UserName string
-	Email    string
-	Phone    string
-	T        int8
 }
 
 type MessageContent struct {

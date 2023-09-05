@@ -10,7 +10,7 @@ import (
 )
 
 type ISendService interface {
-	Send(ctx context.Context, targets []task.Receiver, content string) error
+	Send(ctx context.Context, targets []task.Receiver, content task.MessageContent) error
 }
 
 type Service struct {
@@ -25,13 +25,13 @@ func NewSendService(m mq.IQueueService, dao mysql.INotifyGoDAO) ISendService {
 	}
 }
 
-func (s *Service) Send(ctx context.Context, targets []task.Receiver, content string) error {
+func (s *Service) Send(ctx context.Context, targets []task.Receiver, content task.MessageContent) error {
 	for _, r := range targets {
 		// 写入db
 		//err := s.NotifyGoDAO.InsertRecord(ctx, templateId, task.MsgReceiver, task.MsgContent.Content)
 
 		// 发送
-		err := s.mq.Produce(ctx, mq.Message{Content: content, Target: r})
+		err := s.mq.Produce(ctx, task.Message{MsgContent: content, MsgReceiver: r})
 
 		if err != nil {
 			logger.Error("[send] 发送消息到消息队列失败", logger.Any("receiver", r),

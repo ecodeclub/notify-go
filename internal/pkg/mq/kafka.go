@@ -9,6 +9,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/ecodeclub/notify-go/internal/pkg/logger"
+	"github.com/ecodeclub/notify-go/internal/pkg/task"
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -35,7 +36,7 @@ func NewQueueService(cfg KafkaConfig) IQueueService {
 	return &Kafka{KafkaConfig: cfg, pool: pool, topicBalancer: balas}
 }
 
-func (k *Kafka) Produce(ctx context.Context, m Message) error {
+func (k *Kafka) Produce(ctx context.Context, m task.Message) error {
 	config := sarama.NewConfig()
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
@@ -59,9 +60,9 @@ func (k *Kafka) Produce(ctx context.Context, m Message) error {
 	}()
 
 	// 根据channel类型，和路由策略选取发送的topic
-	topic, err := k.topicBalancer[m.Channel].GetNext()
+	topic, err := k.topicBalancer[m.SendChannel].GetNext()
 	if err != nil {
-		logger.Panic("[Producer] choose topic fail", logger.String("channel", m.Channel),
+		logger.Panic("[Producer] choose topic fail", logger.String("channel", m.SendChannel),
 			logger.String("err", err.Error()))
 	}
 
@@ -84,13 +85,11 @@ func (k *Kafka) Produce(ctx context.Context, m Message) error {
 	return nil
 }
 
-func (k *Kafka) Consume(ctx context.Context, channel string, task QueueTask) {
+func (k *Kafka) Consume(ctx context.Context, channel string, executor task.Executor) {
 	c, err := k.newConsumer(channel)
 	if err != nil {
 		logger.Fatal("[kafka] 消费者启动失败", logger.String("err", err.Error()))
 	}
-
-	handler := k.WrapSaramaHandler(task)
 
 	for {
 		select {
@@ -101,8 +100,8 @@ func (k *Kafka) Consume(ctx context.Context, channel string, task QueueTask) {
 
 		topics := k.getTopicsByChannel(channel)
 
-		err := c.Consume(ctx, topics, handler)
-		if err != nil {
+		er := c.Consume(ctx, topics, k.WrapSaramaHandler(executor))
+		if er != nil {
 			logger.Error("Consume err: ", logger.String("err", err.Error()))
 		}
 	}
@@ -117,10 +116,10 @@ func (k *Kafka) newConsumer(channel string) (sarama.ConsumerGroup, error) {
 	return sarama.NewConsumerGroup(k.Hosts, groupId, saramaCfg)
 }
 
-func (k *Kafka) WrapSaramaHandler(task QueueTask) sarama.ConsumerGroupHandler {
+func (k *Kafka) WrapSaramaHandler(executor task.Executor) sarama.ConsumerGroupHandler {
 	return &ConsumeWrapper{
-		QueueTask: task,
-		pool:      k.pool,
+		Executor: executor,
+		pool:     k.pool,
 	}
 }
 

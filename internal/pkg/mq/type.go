@@ -6,19 +6,9 @@ import (
 	"github.com/ecodeclub/notify-go/internal/pkg/task"
 )
 
-type Message struct {
-	Content string
-	Channel string // 消息类型
-	Target  task.Receiver
-}
-
 type IQueueService interface {
-	Produce(ctx context.Context, msg Message) error
-	Consume(ctx context.Context, channel string, task QueueTask)
-}
-
-type QueueTask interface {
-	Run(ctx context.Context, detail task.Detail)
+	Produce(ctx context.Context, msg task.Message) error
+	Consume(ctx context.Context, channel string, executor task.Executor)
 }
 
 type Topic struct {

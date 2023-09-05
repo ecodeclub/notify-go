@@ -6,6 +6,14 @@ const (
 	push
 )
 
+type Receiver struct {
+	Id       string
+	UserName string
+	Email    string
+	Phone    string
+	T        int8
+}
+
 func (r *Receiver) Type() string {
 	switch r.T {
 	case email:

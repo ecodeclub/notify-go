@@ -22,7 +22,7 @@ func (fh *PushHandler) Name() string {
 	return PushNAME
 }
 
-func (fh *PushHandler) Execute(ctx context.Context, taskDetail task.Detail) error {
+func (fh *PushHandler) Execute(ctx context.Context, taskDetail task.Message) error {
 	if taskDetail.SendChannel != "push" {
 		return nil
 	}

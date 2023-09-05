@@ -11,14 +11,14 @@ import (
 )
 
 type ConsumeWrapper struct {
-	QueueTask
+	task.Executor
 	pool *ants.Pool
 }
 
 func (cw *ConsumeWrapper) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
 
-		taskDetail := task.Detail{}
+		taskDetail := task.Message{}
 
 		err := json.Unmarshal(msg.Value, &taskDetail)
 		if err != nil {
@@ -26,7 +26,7 @@ func (cw *ConsumeWrapper) ConsumeClaim(sess sarama.ConsumerGroupSession, claim s
 		}
 
 		err = cw.pool.Submit(func() {
-			cw.Run(context.TODO(), taskDetail)
+			_ = cw.Execute(context.TODO(), taskDetail)
 		})
 		if err != nil {
 			logger.Error("[consumer] 执行消息发送失败",
