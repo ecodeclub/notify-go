@@ -1,0 +1,40 @@
+host = ["127.0.0.1:29092"]
+
+[topicMappings.sms]
+strategy = "round-robin"
+group = "sms.group"
+[[topicMappings.sms.topic]]
+name = "sms.high"
+weight = 100
+[[topicMappings.sms.topic]]
+name = "sms.medium"
+weight = 100
+[[topicMappings.sms.topic]]
+name = "sms.low"
+weight = 100
+
+[topicMappings.email]
+strategy = "round-robin"
+group = "email.group"
+[[topicMappings.email.topic]]
+name = "email.high"
+weight = 100
+[[topicMappings.email.topic]]
+name = "email.medium"
+weight = 100
+[[topicMappings.email.topic]]
+name = "email.low"
+weight = 100
+
+[topicMappings.push]
+strategy = "round-robin"
+group = "push.group"
+[[topicMappings.push.topic]]
+name = "push.high"
+weight = 100
+[[topicMappings.push.topic]]
+name = "push.medium"
+weight = 100
+[[topicMappings.push.topic]]
+name = "push.low"
+weight = 100
