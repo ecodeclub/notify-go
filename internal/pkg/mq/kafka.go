@@ -85,7 +85,10 @@ func (k *Kafka) Produce(ctx context.Context, m task.Message) error {
 	return nil
 }
 
-func (k *Kafka) Consume(ctx context.Context, channel string, executor task.Executor) {
+func (k *Kafka) Consume(ctx context.Context, executor task.Executor) {
+	// 消费者
+	channel := executor.Name()
+
 	c, err := k.newConsumer(channel)
 	if err != nil {
 		logger.Fatal("[kafka] 消费者启动失败", logger.String("err", err.Error()))
