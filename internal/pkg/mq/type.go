@@ -8,7 +8,7 @@ import (
 
 type IQueueService interface {
 	Produce(ctx context.Context, msg task.Message) error
-	Consume(ctx context.Context, channel string, executor task.Executor)
+	Consume(ctx context.Context, executor task.Executor)
 }
 
 type Topic struct {

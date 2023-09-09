@@ -34,7 +34,7 @@ func serve() {
 
 	// 启动邮件发送的消费者
 	qSrv := mq.NewQueueService(kafkaCfg)
-	qSrv.Consume(ctx, "email", emailExecutor)
+	qSrv.Consume(ctx, emailExecutor)
 }
 
 func main() {
