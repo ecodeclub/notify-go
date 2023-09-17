@@ -2,29 +2,26 @@ package main
 
 import (
 	"context"
+	"github.com/ecodeclub/notify-go/internal"
+	"github.com/ecodeclub/notify-go/internal/queue"
 	"log"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/ecodeclub/notify-go/internal/content"
-	"github.com/ecodeclub/notify-go/internal/pkg/mq"
-	"github.com/ecodeclub/notify-go/internal/send"
-	"github.com/ecodeclub/notify-go/internal/send/sender"
 	"github.com/ecodeclub/notify-go/internal/store/mysql"
 	"github.com/ecodeclub/notify-go/internal/target"
 )
 
 var (
 	engine   = mysql.NewEngine(mysql.DBConfig{DriverName: "", Dsn: ""})
-	kafkaCfg = mq.KafkaConfig{}
+	kafkaCfg = queue.KafkaConfig{}
 )
 
 func serve() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
-
-	// 创建邮件发送handler, 并包装成消息消费者任务
-	emailExecutor := sender.NewEmailHandler(sender.EmailConfig{Addr: "", Auth: nil})
 
 	// 读取kafka配置
 	_, err := toml.DecodeFile("./conf/kafka.toml", &kafkaCfg)
@@ -33,19 +30,13 @@ func serve() {
 	}
 
 	// 启动邮件发送的消费者
-	qSrv := mq.NewQueueService(kafkaCfg)
-	qSrv.Consume(ctx, emailExecutor)
+	qSrv := queue.NewQueueService(kafkaCfg)
+	qSrv.Consume(ctx, "email")
 }
 
 func main() {
 	// 邮件消息发送服务
 	go serve()
-
-	// 发送邮件
-	sendSrv := send.NewSendService(
-		mq.NewQueueService(kafkaCfg),
-		mysql.NewINotifyGoDAO(engine),
-	)
 
 	// 通过target服务获取发送对象
 	targetSrv := target.NewTargetService()
@@ -55,6 +46,15 @@ func main() {
 	contentSrv := content.NewContentService(mysql.NewITemplateDAO(engine))
 	msg, _ := contentSrv.GetContent(context.TODO(), receivers[0], 123, nil)
 
-	// 执行发送
-	_ = sendSrv.Send(context.TODO(), receivers, msg)
+	qSrv := queue.NewQueueService(kafkaCfg)
+	channel := internal.Channel{Queue: qSrv}
+
+	// 执行普通发送
+	n := internal.NewNotification(channel, receivers, msg)
+	_ = n.Send(context.TODO())
+
+	// 定时任务发送
+	task := internal.NewTriggerTask(n, time.Now().Add(time.Minute))
+	task.Send(context.TODO())
+	<-task.Err
 }

@@ -1,14 +1,11 @@
-package sender
+package handler
 
 import (
 	"context"
 	"time"
 
-	"github.com/ecodeclub/notify-go/internal/pkg/task"
 	"github.com/ecodeclub/notify-go/tool"
 )
-
-const PushNAME = "push"
 
 type PushConfig struct{}
 
@@ -19,13 +16,10 @@ func NewPushHandler(c PushConfig) *PushHandler {
 }
 
 func (fh *PushHandler) Name() string {
-	return PushNAME
+	return "push"
 }
 
-func (fh *PushHandler) Execute(ctx context.Context, taskDetail task.Message) error {
-	if taskDetail.SendChannel != "push" {
-		return nil
-	}
+func (fh *PushHandler) Execute(ctx context.Context, delivery Delivery) error {
 	// Mock time cost
 	n := tool.RandIntN(700, 800)
 	time.Sleep(time.Millisecond * time.Duration(n))

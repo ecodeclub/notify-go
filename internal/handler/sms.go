@@ -1,14 +1,11 @@
-package sender
+package handler
 
 import (
 	"context"
 	"time"
 
-	"github.com/ecodeclub/notify-go/internal/pkg/task"
 	"github.com/ecodeclub/notify-go/tool"
 )
-
-const SmsNAME = "sms"
 
 type SmsConfig struct{}
 
@@ -19,13 +16,10 @@ func NewSmsHandler(c SmsConfig) *SmsHandler {
 }
 
 func (fh *SmsHandler) Name() string {
-	return SmsNAME
+	return "sms"
 }
 
-func (fh *SmsHandler) Execute(ctx context.Context, taskDetail task.Message) error {
-	if taskDetail.SendChannel != "sms" {
-		return nil
-	}
+func (fh *SmsHandler) Execute(ctx context.Context, delivery Delivery) error {
 	// Mock time cost
 	n := tool.RandIntN(700, 800)
 	time.Sleep(time.Millisecond * time.Duration(n))

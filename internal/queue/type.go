@@ -1,15 +1,4 @@
-package mq
-
-import (
-	"context"
-
-	"github.com/ecodeclub/notify-go/internal/pkg/task"
-)
-
-type IQueueService interface {
-	Produce(ctx context.Context, msg task.Message) error
-	Consume(ctx context.Context, executor task.Executor)
-}
+package queue
 
 type Topic struct {
 	Name   string `toml:"name"`
