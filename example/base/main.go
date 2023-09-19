@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/ecodeclub/notify-go/internal"
+	"github.com/ecodeclub/notify-go/internal/channel"
 	"github.com/ecodeclub/notify-go/internal/queue"
 	"log"
 	"time"
@@ -31,7 +32,7 @@ func serve() {
 
 	// 启动邮件发送的消费者
 	qSrv := queue.NewQueueService(kafkaCfg)
-	qSrv.Consume(ctx, "email")
+	qSrv.Consume(ctx, channel.NewEmailChannel(channel.EmailConfig{}))
 }
 
 func main() {
@@ -44,13 +45,14 @@ func main() {
 
 	// 通过content服务获取发送内容
 	contentSrv := content.NewContentService(mysql.NewITemplateDAO(engine))
-	msg, _ := contentSrv.GetContent(context.TODO(), receivers[0], 123, nil)
+	msg, _ := contentSrv.GetContent(context.TODO(), receivers, 123, nil)
 
-	qSrv := queue.NewQueueService(kafkaCfg)
-	channel := internal.Channel{Queue: qSrv}
+	// 创建异步邮件发送队列
+	q := queue.NewQueueService(kafkaCfg)
+	channelAsync := channel.NewChannel("email", q)
 
 	// 执行普通发送
-	n := internal.NewNotification(channel, receivers, msg)
+	n := internal.NewNotification(channelAsync, receivers, msg)
 	_ = n.Send(context.TODO())
 
 	// 定时任务发送

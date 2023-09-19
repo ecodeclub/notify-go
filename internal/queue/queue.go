@@ -4,41 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/IBM/sarama"
-	"github.com/ecodeclub/notify-go/internal/handler"
 	"github.com/ecodeclub/notify-go/internal/pkg/logger"
+	"github.com/ecodeclub/notify-go/internal/pkg/types"
 	"sync"
 	"time"
 )
 
 type IQueue interface {
-	Produce(ctx context.Context, data []byte) error
-	Consume(ctx context.Context, channel string)
+	Produce(ctx context.Context, channel types.IChannel, delivery types.Delivery) error
+	Consume(ctx context.Context, channel types.IChannel)
 }
 
 type Kafka struct {
 	Config        KafkaConfig
 	topicBalancer map[string]Balancer[Topic]
-	handlers      map[string]handler.Executor
 }
 
 func NewQueueService(cfg KafkaConfig) IQueue {
-	var (
-		balancers = map[string]Balancer[Topic]{}
-		handlers  = map[string]handler.Executor{}
-	)
+	var balancers = map[string]Balancer[Topic]{}
 
 	for channel, channelTopicsCfg := range cfg.TopicMappings {
 		// 为channel类型消息建立balancer
 		bala := NewBalanceBuilder[Topic](channel, channelTopicsCfg.Topics).Build(channelTopicsCfg.Strategy)
-		executor := handler.NewChannelHandler(channel)
 		balancers[channel] = bala
-		handlers[channel] = executor
 	}
 
-	return &Kafka{Config: cfg, topicBalancer: balancers, handlers: handlers}
+	return &Kafka{Config: cfg, topicBalancer: balancers}
 }
 
-func (k *Kafka) Produce(ctx context.Context, data []byte) error {
+func (k *Kafka) Produce(ctx context.Context, c types.IChannel, delivery types.Delivery) error {
 	config := sarama.NewConfig()
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
@@ -61,16 +55,15 @@ func (k *Kafka) Produce(ctx context.Context, data []byte) error {
 		<-producer.Errors()
 	}()
 
-	// TODO data结构定义
-	var channel string
-
 	// 根据channel类型，和路由策略选取发送的topic
-	topic, err := k.topicBalancer[channel].GetNext()
+	topic, err := k.topicBalancer[c.Name()].GetNext()
 	if err != nil {
-		logger.Panic("[Producer] choose topic fail", logger.String("channel", channel),
+		logger.Panic("[Producer] choose topic fail", logger.String("channel", c.Name()),
 			logger.String("err", err.Error()))
 	}
 
+	// 序列化data
+	data, _ := json.Marshal(delivery)
 	saramaMsg := &sarama.ProducerMessage{Topic: topic.Name, Key: nil, Value: sarama.ByteEncoder(data)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*10)
@@ -85,8 +78,8 @@ func (k *Kafka) Produce(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (k *Kafka) Consume(ctx context.Context, channel string) {
-	c, err := k.newConsumer(channel)
+func (k *Kafka) Consume(ctx context.Context, c types.IChannel) {
+	consumer, err := k.newConsumer(c.Name())
 	if err != nil {
 		logger.Fatal("[kafka] 消费者启动失败", logger.String("err", err.Error()))
 	}
@@ -98,9 +91,9 @@ func (k *Kafka) Consume(ctx context.Context, channel string) {
 		default:
 		}
 
-		topics := k.getTopicsByChannel(channel)
+		topics := k.getTopicsByChannel(c.Name())
 
-		er := c.Consume(ctx, topics, k.WrapSaramaHandler(k.handlers[channel]))
+		er := consumer.Consume(ctx, topics, k.WrapSaramaHandler(c))
 		if er != nil {
 			logger.Error("Consume err: ", logger.String("err", err.Error()))
 		}
@@ -138,19 +131,19 @@ func (k *Kafka) getGroupIdByChannel(channel string) string {
 	return topicCfg.Group
 }
 
-func (k *Kafka) WrapSaramaHandler(executor handler.Executor) sarama.ConsumerGroupHandler {
+func (k *Kafka) WrapSaramaHandler(executor types.IChannel) sarama.ConsumerGroupHandler {
 	return &ConsumeWrapper{
 		Executor: executor,
 	}
 }
 
 type ConsumeWrapper struct {
-	Executor handler.Executor
+	Executor types.IChannel
 }
 
 func (c *ConsumeWrapper) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		delivery := handler.Delivery{}
+		delivery := types.Delivery{}
 		err := json.Unmarshal(msg.Value, &delivery)
 		if err != nil {
 			logger.Error("[consumer] unmarshal task detail fail", logger.String("err", err.Error()))
