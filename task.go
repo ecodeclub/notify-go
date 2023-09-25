@@ -1,4 +1,4 @@
-package internal
+package notify_go
 
 import (
 	"context"

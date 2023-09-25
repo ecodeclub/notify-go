@@ -1,4 +1,4 @@
-package types
+package notifier
 
 type Receiver struct {
 	Email  string

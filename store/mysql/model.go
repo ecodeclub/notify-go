@@ -2,9 +2,9 @@ package mysql
 
 import (
 	"context"
-	"github.com/ecodeclub/notify-go/internal/pkg/types"
 	"time"
 
+	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"xorm.io/xorm"
 )
 
@@ -13,7 +13,7 @@ type notifyGoDAO struct {
 }
 
 type INotifyGoDAO interface {
-	InsertRecord(ctx context.Context, templateId int64, target types.Receiver, msgContent string) error
+	InsertRecord(ctx context.Context, templateId int64, target notifier.Receiver, msgContent string) error
 }
 
 type ITemplateDAO interface {
@@ -28,7 +28,7 @@ func NewITemplateDAO(e *xorm.Engine) ITemplateDAO {
 	return &notifyGoDAO{e}
 }
 
-func (n *notifyGoDAO) InsertRecord(ctx context.Context, templateId int64, target types.Receiver,
+func (n *notifyGoDAO) InsertRecord(ctx context.Context, templateId int64, target notifier.Receiver,
 	msgContent string) error {
 	sess := n.engine.NewSession()
 	defer sess.Close()

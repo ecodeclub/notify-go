@@ -1,14 +1,15 @@
-package internal
+package notify_go
 
 import (
 	"context"
-	"github.com/ecodeclub/notify-go/internal/pkg/types"
+
+	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"github.com/pborman/uuid"
 )
 
 type Notification struct {
-	types.Delivery
-	Channel types.IChannel
+	notifier.Delivery
+	Channel notifier.IChannel
 }
 
 type ChannelFunc func(ctx context.Context, no *Notification) error
@@ -27,13 +28,13 @@ func (no *Notification) Send(ctx context.Context, mls ...Middleware) error {
 	return root(ctx, no)
 }
 
-func NewNotification(c types.IChannel, recvs []types.Receiver, cont types.Content) *Notification {
+func NewNotification(c notifier.IChannel, recvs []notifier.Receiver, content []byte) *Notification {
 	no := &Notification{
 		Channel: c,
-		Delivery: types.Delivery{
+		Delivery: notifier.Delivery{
 			DeliveryID: uuid.NewUUID().String(),
 			Receivers:  recvs,
-			Content:    cont,
+			Content:    content,
 		},
 	}
 	return no

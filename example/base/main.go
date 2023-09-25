@@ -2,22 +2,24 @@ package main
 
 import (
 	"context"
-	"github.com/ecodeclub/notify-go/internal"
-	"github.com/ecodeclub/notify-go/internal/channel"
-	"github.com/ecodeclub/notify-go/internal/queue"
 	"log"
 	"time"
 
+	notify_go "github.com/ecodeclub/notify-go"
+	"github.com/ecodeclub/notify-go/channel"
+	"github.com/ecodeclub/notify-go/channel/email"
+	"github.com/ecodeclub/notify-go/queue/kafka"
+
 	"github.com/BurntSushi/toml"
 
-	"github.com/ecodeclub/notify-go/internal/content"
-	"github.com/ecodeclub/notify-go/internal/store/mysql"
-	"github.com/ecodeclub/notify-go/internal/target"
+	"github.com/ecodeclub/notify-go/content"
+	"github.com/ecodeclub/notify-go/store/mysql"
+	"github.com/ecodeclub/notify-go/target"
 )
 
 var (
 	engine   = mysql.NewEngine(mysql.DBConfig{DriverName: "", Dsn: ""})
-	kafkaCfg = queue.KafkaConfig{}
+	kafkaCfg = kafka.Config{}
 )
 
 func serve() {
@@ -31,8 +33,8 @@ func serve() {
 	}
 
 	// 启动邮件发送的消费者
-	qSrv := queue.NewQueueService(kafkaCfg)
-	qSrv.Consume(ctx, channel.NewEmailChannel(channel.EmailConfig{}))
+	qSrv := kafka.NewKafka(kafkaCfg)
+	qSrv.Consume(ctx, email.NewEmailChannel(email.Config{}))
 }
 
 func main() {
@@ -48,15 +50,15 @@ func main() {
 	msg, _ := contentSrv.GetContent(context.TODO(), receivers, 123, nil)
 
 	// 创建异步邮件发送队列
-	q := queue.NewQueueService(kafkaCfg)
-	channelAsync := channel.NewChannel("email", q)
+	q := kafka.NewKafka(kafkaCfg)
+	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: email.NewEmailChannel(email.Config{})}
 
 	// 执行普通发送
-	n := internal.NewNotification(channelAsync, receivers, msg)
+	n := notify_go.NewNotification(asyncChannel, receivers, msg)
 	_ = n.Send(context.TODO())
 
 	// 定时任务发送
-	task := internal.NewTriggerTask(n, time.Now().Add(time.Minute))
+	task := notify_go.NewTriggerTask(n, time.Now().Add(time.Minute))
 	task.Send(context.TODO())
 	<-task.Err
 }

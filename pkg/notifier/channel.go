@@ -1,11 +1,11 @@
-package types
+package notifier
 
 import "context"
 
 type Delivery struct {
 	DeliveryID string
 	Receivers  []Receiver
-	Content    Content
+	Content    []byte
 }
 
 type IChannel interface {

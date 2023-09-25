@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"github.com/ecodeclub/notify-go/internal/pkg/logger"
+	"github.com/ecodeclub/notify-go/pkg/logger"
 	"xorm.io/xorm"
 )
 

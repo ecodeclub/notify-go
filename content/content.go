@@ -2,9 +2,9 @@ package content
 
 import (
 	"context"
-	"github.com/ecodeclub/notify-go/internal/pkg/types"
 
-	"github.com/ecodeclub/notify-go/internal/store/mysql"
+	"github.com/ecodeclub/notify-go/pkg/notifier"
+	"github.com/ecodeclub/notify-go/store/mysql"
 )
 
 /*
@@ -16,8 +16,8 @@ type Service struct {
 }
 
 type IContentService interface {
-	GetContent(ctx context.Context, receivers []types.Receiver, templateId uint64,
-		variable map[string]interface{}) (types.Content, error)
+	GetContent(ctx context.Context, receivers []notifier.Receiver, templateId uint64,
+		variable map[string]interface{}) ([]byte, error)
 }
 
 func NewContentService(td mysql.ITemplateDAO) IContentService {
@@ -26,9 +26,9 @@ func NewContentService(td mysql.ITemplateDAO) IContentService {
 	}
 }
 
-func (s *Service) GetContent(ctx context.Context, receivers []types.Receiver, templateId uint64,
-	variable map[string]interface{}) (types.Content, error) {
-	var cont types.Content
+func (s *Service) GetContent(ctx context.Context, receivers []notifier.Receiver, templateId uint64,
+	variable map[string]interface{}) ([]byte, error) {
+	var cont []byte
 
 	tpl, err := s.tDAO.GetTContent(templateId, "")
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Service) GetContent(ctx context.Context, receivers []types.Receiver, te
 }
 
 func (s *Service) renderContent(ctx context.Context, tpl string,
-	variable map[string]interface{}) (types.Content, error) {
-	var cont types.Content
+	variable map[string]interface{}) ([]byte, error) {
+	var cont []byte
 	return cont, nil
 }
