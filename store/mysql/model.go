@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ecodeclub/notify-go/internal/pkg/task"
+	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"xorm.io/xorm"
 )
 
@@ -13,7 +13,7 @@ type notifyGoDAO struct {
 }
 
 type INotifyGoDAO interface {
-	InsertRecord(ctx context.Context, templateId int64, target task.Receiver, msgContent string) error
+	InsertRecord(ctx context.Context, templateId int64, target notifier.Receiver, msgContent string) error
 }
 
 type ITemplateDAO interface {
@@ -28,7 +28,7 @@ func NewITemplateDAO(e *xorm.Engine) ITemplateDAO {
 	return &notifyGoDAO{e}
 }
 
-func (n *notifyGoDAO) InsertRecord(ctx context.Context, templateId int64, target task.Receiver,
+func (n *notifyGoDAO) InsertRecord(ctx context.Context, templateId int64, target notifier.Receiver,
 	msgContent string) error {
 	sess := n.engine.NewSession()
 	defer sess.Close()
@@ -56,11 +56,9 @@ func (n *notifyGoDAO) InsertRecord(ctx context.Context, templateId int64, target
 	}
 
 	tgt := Target{
-		TargetIdType: target.Type(),
-		TargetId:     target.Value(),
-		DeliveryId:   delivery.Id,
-		Status:       1, // 创建状态
-		MsgContent:   msgContent,
+		DeliveryId: delivery.Id,
+		Status:     1, // 创建状态
+		MsgContent: msgContent,
 	}
 	if _, err := n.engine.Insert(&tgt); err != nil {
 		return err
