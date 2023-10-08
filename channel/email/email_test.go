@@ -3,7 +3,6 @@ package email
 import (
 	"context"
 	"encoding/json"
-	"net/smtp"
 	"testing"
 	"time"
 
@@ -12,14 +11,10 @@ import (
 
 func TestSend(t *testing.T) {
 	e := NewEmailChannel(Config{
-		senderAddress: "Hooko <hooko_1@cooode.fun>",
-		smtpHostAddr:  "gz-smtp.qcloudmail.com:465",
-		smtpAuth: smtp.PlainAuth(
-			"",
-			"hooko_1@cooode.fun",
-			"",
-			"gz-smtp.qcloudmail.com",
-		),
+		SenderAddress: "Hooko <hooko_1@cooode.fun>",
+		SmtpHostAddr:  "gz-smtp.qcloudmail.com:465",
+		SmtpUserName:  "hooko_1@cooode.fun",
+		SmtpPwd:       "xxx",
 	})
 	content := Content{
 		Subject: "发送主题-测试",

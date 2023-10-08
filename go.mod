@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/IBM/sarama v1.41.1
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
+	github.com/kevinburke/twilio-go v0.0.0-20221122012537-65f3dd7539e2
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.8.1
 	go.uber.org/zap v1.25.0
@@ -18,6 +19,7 @@ require (
 	github.com/eapache/go-resiliency v1.4.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/ecodeclub/ekit v0.0.8 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
@@ -35,7 +37,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/go-types v0.0.0-20210723172823-2deba1f80ba7 // indirect
 	github.com/kevinburke/rest v0.0.0-20210506044642-5611499aa33c // indirect
-	github.com/kevinburke/twilio-go v0.0.0-20221122012537-65f3dd7539e2 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

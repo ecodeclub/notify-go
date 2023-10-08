@@ -3,10 +3,11 @@ package sms
 import (
 	"context"
 	"encoding/json"
+	"net/url"
+
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"github.com/kevinburke/twilio-go"
 	"github.com/pkg/errors"
-	"net/url"
 )
 
 type Config struct {
@@ -48,7 +49,6 @@ func (sc *ChannelSmsImpl) Execute(ctx context.Context, deli notifier.Delivery) e
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-
 			_, err := sc.client.SendMessage(sc.fromPhoneNumber, recv.Phone, msgContent.Data, []*url.URL{})
 			if err != nil {
 				return errors.Wrapf(err, "failed to send message to phone number '%s' using Twilio", recv.Phone)
