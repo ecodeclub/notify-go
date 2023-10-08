@@ -2,26 +2,60 @@ package sms
 
 import (
 	"context"
-	"time"
-
+	"encoding/json"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
-	"github.com/ecodeclub/notify-go/tool"
+	"github.com/kevinburke/twilio-go"
+	"github.com/pkg/errors"
+	"net/url"
 )
 
-type Config struct{}
+type Config struct {
+	AccountSID      string `json:"account_sid"`
+	AuthToken       string `json:"auth_token"`
+	FromPhoneNumber string `json:"from_phone_number"`
+}
 
-type ChannelSmsImpl struct{}
+type twilioClient interface {
+	SendMessage(from, to, body string, mediaURLs []*url.URL) (*twilio.Message, error)
+}
 
-type Content struct{}
+type ChannelSmsImpl struct {
+	client          twilioClient
+	fromPhoneNumber string
+}
+
+type Content struct {
+	Data string
+}
 
 func NewSmsChannel(c Config) *ChannelSmsImpl {
-	return &ChannelSmsImpl{}
+	client := twilio.NewClient(c.AccountSID, c.AuthToken, nil)
+	return &ChannelSmsImpl{
+		client:          client.Messages,
+		fromPhoneNumber: c.FromPhoneNumber,
+	}
 }
 
 func (sc *ChannelSmsImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
-	// Mock time cost
-	n := tool.RandIntN(700, 800)
-	time.Sleep(time.Millisecond * time.Duration(n))
+	var msgContent Content
+	err := json.Unmarshal(deli.Content, &msgContent)
+	if err != nil {
+		return err
+	}
+
+	for _, recv := range deli.Receivers {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+
+			_, err := sc.client.SendMessage(sc.fromPhoneNumber, recv.Phone, msgContent.Data, []*url.URL{})
+			if err != nil {
+				return errors.Wrapf(err, "failed to send message to phone number '%s' using Twilio", recv.Phone)
+			}
+		}
+	}
+
 	return nil
 }
 
