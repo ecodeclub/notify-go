@@ -2,13 +2,12 @@ package ral
 
 import (
 	"fmt"
-	"github.com/ecodeclub/notify-go/pkg/logger"
+	"log/slog"
 	"sync"
 	"time"
 )
 
-type LogRecord struct {
-	LogId             int64
+type Record struct {
 	RspCode           int
 	Protocol          string
 	Method            string
@@ -30,25 +29,19 @@ type StaticsItem struct {
 	StopPoint  time.Time
 }
 
-func newLogRecord() LogRecord {
-	return LogRecord{
+func newLogRecord() Record {
+	return Record{
 		timeCostSpan:  make(map[string]*StaticsItem),
 		timeCostPoint: make(map[string]time.Duration),
 		field:         make(map[string]any),
 	}
 }
 
-func NewLogRecord() LogRecord {
+func NewLogRecord() Record {
 	return newLogRecord()
 }
 
-func NewLogRecordWithID(id int64) LogRecord {
-	l := newLogRecord()
-	l.LogId = id
-	return l
-}
-
-func (lr *LogRecord) PointStart(name string) {
+func (lr *Record) PointStart(name string) {
 	defer lr.timeCostSpanLock.Unlock()
 	lr.timeCostSpanLock.Lock()
 	item := new(StaticsItem)
@@ -56,7 +49,7 @@ func (lr *LogRecord) PointStart(name string) {
 	lr.timeCostSpan[name] = item
 }
 
-func (lr *LogRecord) PointStop(name string) {
+func (lr *Record) PointStop(name string) {
 	defer lr.timeCostSpanLock.Unlock()
 	lr.timeCostSpanLock.Lock()
 	item, ok := lr.timeCostSpan[name]
@@ -65,13 +58,13 @@ func (lr *LogRecord) PointStop(name string) {
 	}
 }
 
-func (lr *LogRecord) AddTimeCostPoint(name string, d time.Duration) {
+func (lr *Record) AddTimeCostPoint(name string, d time.Duration) {
 	defer lr.timeCostPointLock.Unlock()
 	lr.timeCostPointLock.Lock()
 	lr.timeCostPoint[name] = d
 }
 
-func (lr *LogRecord) AddField(name string, value any) {
+func (lr *Record) AddField(name string, value any) {
 	defer lr.fieldLock.Unlock()
 	lr.fieldLock.Lock()
 	lr.field[name] = value
@@ -81,30 +74,33 @@ func (s *StaticsItem) GetDuration() time.Duration {
 	return s.StopPoint.Sub(s.StartPoint)
 }
 
-func (lr *LogRecord) Flush() {
-	field := make([]logger.Field, 0, 16)
+func (lr *Record) Flush(l *slog.Logger) {
+	field := make([]any, 0, 16)
 	field = append(field,
-		logger.Int("code", lr.RspCode), logger.String("path", lr.Url),
-		logger.String("port", lr.Port), logger.String("host", lr.Host),
-		logger.Int("retry", lr.retry), logger.String("protocol", lr.Protocol),
-		logger.String("method", lr.Method))
+		"code", lr.RspCode,
+		"path", lr.Url,
+		"port", lr.Port,
+		"host", lr.Host,
+		"retry", lr.retry,
+		"protocol", lr.Protocol,
+		"method", lr.Method)
 
 	for name, sItem := range lr.timeCostSpan {
 		dura := sItem.GetDuration()
-		field = append(field, logger.Duration(name, dura))
+		field = append(field, slog.Duration(name, dura))
 	}
 
 	for name, f := range lr.field {
-		field = append(field, logger.Any(name, f))
+		field = append(field, slog.Any(name, f))
 	}
 
 	for name, d := range lr.timeCostPoint {
-		field = append(field, logger.Duration(name, d))
+		field = append(field, slog.Duration(name, d))
 	}
 
 	if lr.Error != nil {
-		logger.Default().Error(fmt.Sprintf("%v", lr.Error), field...)
+		l.Error(fmt.Sprintf("%v", lr.Error), field...)
 	} else {
-		logger.Default().Info("", field...)
+		l.Info("success", field...)
 	}
 }

@@ -3,6 +3,8 @@ package ral
 import (
 	"context"
 	"fmt"
+
+	"github.com/ecodeclub/notify-go/pkg/log"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 )
@@ -32,14 +34,9 @@ type Request struct {
 }
 
 func (c Client) Ral(ctx context.Context, name string, req Request, respSucc any, respFail any) error {
-	var lr LogRecord
-	defer lr.Flush()
-	logId, ok := ctx.Value("req_id").(int64)
-	if !ok {
-		lr = NewLogRecord()
-	} else {
-		lr = NewLogRecordWithID(logId)
-	}
+	var lr = NewLogRecord()
+	logger := log.FromContext(ctx)
+	defer lr.Flush(logger)
 
 	intf, ok := c.getUrl(name)
 	if !ok {
