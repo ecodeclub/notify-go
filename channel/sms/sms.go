@@ -2,7 +2,6 @@ package sms
 
 import (
 	"context"
-	"encoding/json"
 	"net/url"
 
 	"github.com/ecodeclub/notify-go/pkg/notifier"
@@ -38,11 +37,7 @@ func NewSmsChannel(c Config) *ChannelSmsImpl {
 }
 
 func (sc *ChannelSmsImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
-	var msgContent Content
-	err := json.Unmarshal(deli.Content, &msgContent)
-	if err != nil {
-		return err
-	}
+	msgContent := sc.initSMSContent(deli.Content)
 
 	for _, recv := range deli.Receivers {
 		select {
@@ -61,4 +56,11 @@ func (sc *ChannelSmsImpl) Execute(ctx context.Context, deli notifier.Delivery) e
 
 func (sc *ChannelSmsImpl) Name() string {
 	return "sms"
+}
+
+func (sc *ChannelSmsImpl) initSMSContent(nc notifier.Content) Content {
+	c := Content{
+		Data: string(nc.Data),
+	}
+	return c
 }

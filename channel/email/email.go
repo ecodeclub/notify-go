@@ -3,7 +3,6 @@ package email
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"net"
 	"net/smtp"
 
@@ -45,14 +44,13 @@ func NewEmailChannel(cfg Config) *ChannelEmailImpl {
 }
 
 func (c *ChannelEmailImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
-	var msgContent Content
-	err := json.Unmarshal(deli.Content, &msgContent)
-	if err != nil {
-		return err
-	}
+	var err error
+	msgContent := c.initEmailContent(deli.Content)
 
-	c.email.To = slice.Map[notifier.Receiver, string](deli.Receivers,
-		func(idx int, src notifier.Receiver) string { return src.Email })
+	c.email.To = slice.Map[notifier.Receiver, string](deli.Receivers, func(idx int, src notifier.Receiver) string {
+		return src.Email
+	})
+
 	c.email.From = c.SenderAddress
 	// TODO cc不是抄送, 而是append到to内
 	c.email.Cc = msgContent.Cc
@@ -72,15 +70,24 @@ func (c *ChannelEmailImpl) Execute(ctx context.Context, deli notifier.Delivery) 
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		err = ctx.Err()
 	case <-ch:
 		if err != nil {
 			err = errors.Wrap(err, "failed to send mail")
 		}
-		return err
 	}
+
+	return err
 }
 
 func (c *ChannelEmailImpl) Name() string {
 	return "email"
+}
+
+func (c *ChannelEmailImpl) initEmailContent(nc notifier.Content) Content {
+	cc := Content{
+		Subject: nc.Title,
+		Html:    string(nc.Data),
+	}
+	return cc
 }

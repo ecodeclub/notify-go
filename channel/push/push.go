@@ -3,12 +3,11 @@ package push
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"github.com/ecodeclub/ekit/slice"
-	"github.com/ecodeclub/notify-go/pkg/logger"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"github.com/ecodeclub/notify-go/pkg/ral"
+	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"strconv"
 	"time"
@@ -58,28 +57,25 @@ type Result struct {
 	Data map[string]string `json:"data"`
 }
 
-func NewPushChannel(c Config) *ChannelPushImpl {
+func NewPushChannel(c Config, client ral.Client) *ChannelPushImpl {
 	pc := &ChannelPushImpl{
-		client: ral.NewClient("getui"),
+		client: client,
 		config: c,
 	}
 	return pc
 }
 
 func (pc *ChannelPushImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
-	token, err := pc.getToken()
+	token, err := pc.getToken(ctx)
 	if err != nil {
 		return err
 	}
 
-	var content Content
-	err = json.Unmarshal(deli.Content, &content)
-	if err != nil {
-		return err
-	}
-
+	content := pc.initPushContent(deli.Content)
 	if ctx.Value("req_id") != nil {
 		content.RequestID = ctx.Value("req_id").(string)
+	} else {
+		content.RequestID = uuid.NewUUID().String()
 	}
 
 	userIds := slice.Map[notifier.Receiver, string](deli.Receivers, func(idx int, recv notifier.Receiver) string {
@@ -97,9 +93,8 @@ func (pc *ChannelPushImpl) Execute(ctx context.Context, deli notifier.Delivery) 
 	}
 
 	var resp map[string]any
-	err = pc.client.Ral(context.TODO(), "Send", req, &resp, map[string]any{})
+	err = pc.client.Ral(ctx, "Send", req, &resp, map[string]any{})
 
-	logger.Default().Info("push send done", logger.Any("resp", resp))
 	return err
 }
 
@@ -107,7 +102,7 @@ func (pc *ChannelPushImpl) Name() string {
 	return "push"
 }
 
-func (pc *ChannelPushImpl) getToken() (token string, err error) {
+func (pc *ChannelPushImpl) getToken(ctx context.Context) (token string, err error) {
 	ts, sign := pc.getSign()
 	req := ral.Request{
 		Header: map[string]string{"content-type": "application/json;charset=utf-8"},
@@ -120,7 +115,7 @@ func (pc *ChannelPushImpl) getToken() (token string, err error) {
 	}
 
 	var respSucc Result
-	err = pc.client.Ral(context.TODO(), "Auth", req, &respSucc, map[string]any{})
+	err = pc.client.Ral(ctx, "Auth", req, &respSucc, map[string]any{})
 	if err != nil {
 		return
 	}
@@ -144,4 +139,18 @@ func (pc *ChannelPushImpl) getSign() (timestamp string, sign string) {
 	sign = fmt.Sprintf("%x", sha256Hash)
 
 	return
+}
+
+func (pc *ChannelPushImpl) initPushContent(nc notifier.Content) Content {
+	c := Content{
+		Settings: Settings{TTL: 7200000},
+		Audience: Audience{Cid: make([]string, 0, 1)},
+		PushMessage: PushMessage{Notification: Notification{
+			Title:     nc.Title,
+			Body:      string(nc.Data),
+			ClickType: nc.ClickType,
+			URL:       nc.URL},
+		},
+	}
+	return c
 }

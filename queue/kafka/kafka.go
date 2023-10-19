@@ -3,11 +3,12 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"github.com/ecodeclub/notify-go/pkg/log"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/ecodeclub/notify-go/pkg/logger"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 )
 
@@ -45,12 +46,13 @@ func NewKafka(cfg Config) *Kafka {
 }
 
 func (k *Kafka) Produce(ctx context.Context, c notifier.IChannel, delivery notifier.Delivery) error {
+	logger := log.FromContext(ctx)
 	config := sarama.NewConfig()
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewAsyncProducer(k.Config.Hosts, config)
 	if err != nil {
-		logger.Panic("[mq] 创建生产者出错", logger.Any("err", err.Error()))
+		slog.Error("[mq] 创建生产者出错", "err", err)
 	}
 	defer producer.AsyncClose()
 
@@ -70,8 +72,7 @@ func (k *Kafka) Produce(ctx context.Context, c notifier.IChannel, delivery notif
 	// 根据channel类型，和路由策略选取发送的topic
 	topic, err := k.topicBalancer[c.Name()].GetNext()
 	if err != nil {
-		logger.Panic("[Producer] choose topic fail", logger.String("channel", c.Name()),
-			logger.String("err", err.Error()))
+		logger.Error("[Producer] choose topic fail", "channel", c.Name(), "err", err)
 	}
 
 	// 序列化data
@@ -81,6 +82,7 @@ func (k *Kafka) Produce(ctx context.Context, c notifier.IChannel, delivery notif
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*10)
 	select {
 	case producer.Input() <- saramaMsg:
+		logger.Info("[mq] 发送消息成功")
 	case <-ctx.Done():
 		logger.Warn("[mq] 发送消息超时")
 	}
@@ -91,9 +93,10 @@ func (k *Kafka) Produce(ctx context.Context, c notifier.IChannel, delivery notif
 }
 
 func (k *Kafka) Consume(ctx context.Context, c notifier.IChannel) {
+	logger := log.FromContext(ctx)
 	consumer, err := k.newConsumer(c.Name())
 	if err != nil {
-		logger.Fatal("[kafka] 消费者启动失败", logger.String("err", err.Error()))
+		logger.Error("[kafka] 消费者启动失败", "err", err)
 	}
 
 	for {
@@ -105,9 +108,9 @@ func (k *Kafka) Consume(ctx context.Context, c notifier.IChannel) {
 
 		topics := k.getTopicsByChannel(c.Name())
 
-		er := consumer.Consume(ctx, topics, k.WrapSaramaHandler(c))
+		er := consumer.Consume(ctx, topics, k.WrapSaramaHandler(ctx, c))
 		if er != nil {
-			logger.Error("Consume err: ", logger.String("err", err.Error()))
+			logger.Error("Consume err: ", "err", err)
 		}
 	}
 }
@@ -124,7 +127,6 @@ func (k *Kafka) newConsumer(channel string) (sarama.ConsumerGroup, error) {
 func (k *Kafka) getTopicsByChannel(channel string) []string {
 	topicCfg, ok := k.Config.TopicMappings[channel]
 	if !ok {
-		logger.Panic("找不到该channel的topic：%s", logger.String("channel", channel))
 		return nil
 	}
 	topics := make([]string, 0, len(topicCfg.Topics))
@@ -136,20 +138,19 @@ func (k *Kafka) getTopicsByChannel(channel string) []string {
 }
 
 func (k *Kafka) getGroupIdByChannel(channel string) string {
-	topicCfg, ok := k.Config.TopicMappings[channel]
-	if !ok {
-		logger.Panic("找不到该channel的topic：%s", logger.String("channel", channel))
-	}
-	return topicCfg.Group
+	return k.Config.TopicMappings[channel].Group
 }
 
-func (k *Kafka) WrapSaramaHandler(executor notifier.IChannel) sarama.ConsumerGroupHandler {
+func (k *Kafka) WrapSaramaHandler(ctx context.Context, executor notifier.IChannel) sarama.ConsumerGroupHandler {
+	logger := log.FromContext(ctx)
 	return &ConsumeWrapper{
+		logger:   logger,
 		Executor: executor,
 	}
 }
 
 type ConsumeWrapper struct {
+	logger   *slog.Logger
 	Executor notifier.IChannel
 }
 
@@ -158,14 +159,12 @@ func (c *ConsumeWrapper) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		delivery := notifier.Delivery{}
 		err := json.Unmarshal(msg.Value, &delivery)
 		if err != nil {
-			logger.Error("[consumer] unmarshal task detail fail", logger.String("err", err.Error()))
+			c.logger.Error("[consumer] unmarshal task detail fail", "err", err)
 		}
-
 		err = c.Executor.Execute(context.TODO(), delivery)
 		if err != nil {
-			logger.Error("[consumer] 执行消息发送失败",
-				logger.String("topic", msg.Topic), logger.Int32("partition", msg.Partition),
-				logger.Int64("offset", msg.Offset), logger.String("err", err.Error()))
+			c.logger.Error("[consumer] 执行消息发送失败",
+				"topic", msg.Topic, "partition", msg.Partition, "offset", msg.Offset, "err", err)
 			return err
 		}
 

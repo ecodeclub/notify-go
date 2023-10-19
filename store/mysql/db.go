@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"github.com/ecodeclub/notify-go/pkg/logger"
+	"log/slog"
 	"xorm.io/xorm"
 )
 
@@ -13,7 +13,7 @@ type DBConfig struct {
 func NewEngine(cfg DBConfig) *xorm.Engine {
 	e, err := xorm.NewEngine(cfg.DriverName, cfg.Dsn)
 	if err != nil {
-		logger.Fatal("[db]创建db失败")
+		slog.Error("[db]创建db失败")
 	}
 	return e
 }

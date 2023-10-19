@@ -13,15 +13,8 @@ type Client struct {
 	Service Resource
 }
 
-func NewClient(name string) Client {
-	c := Client{}
-	for _, src := range service.Resources {
-		if src.Name == name {
-			c.Service = src
-			break
-		}
-	}
-	return c
+func NewClient(service Resource) Client {
+	return Client{service}
 }
 
 type Request struct {

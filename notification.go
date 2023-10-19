@@ -28,7 +28,7 @@ func (no *Notification) Send(ctx context.Context, mls ...Middleware) error {
 	return root(ctx, no)
 }
 
-func NewNotification(c notifier.IChannel, recvs []notifier.Receiver, content []byte) *Notification {
+func NewNotification(c notifier.IChannel, recvs []notifier.Receiver, content notifier.Content) *Notification {
 	no := &Notification{
 		Channel: c,
 		Delivery: notifier.Delivery{

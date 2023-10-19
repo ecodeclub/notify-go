@@ -5,8 +5,6 @@ import (
 	"log"
 )
 
-var service Service
-
 type Service struct {
 	Resources []Resource `toml:"Resources"`
 }
@@ -30,9 +28,10 @@ type Interface struct {
 	Port   string `toml:"Port"`
 }
 
-func init() {
-	service = Service{}
-	if _, err := toml.DecodeFile("../../conf/services.toml", &service); err != nil {
+func NewService(file string) Service {
+	service := new(Service)
+	if _, err := toml.DecodeFile(file, service); err != nil {
 		log.Printf("[ral] 初始化失败 %v.", err)
 	}
+	return *service
 }

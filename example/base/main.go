@@ -2,62 +2,103 @@ package main
 
 import (
 	"context"
-	"log"
-	"time"
-
+	"github.com/BurntSushi/toml"
+	"github.com/ecodeclub/ekit/slice"
 	notify_go "github.com/ecodeclub/notify-go"
 	"github.com/ecodeclub/notify-go/channel"
-	"github.com/ecodeclub/notify-go/channel/email"
+	"github.com/ecodeclub/notify-go/channel/push"
+	"github.com/ecodeclub/notify-go/pkg/notifier"
+	"github.com/ecodeclub/notify-go/pkg/ral"
+	"github.com/ecodeclub/notify-go/queue"
 	"github.com/ecodeclub/notify-go/queue/kafka"
-
-	"github.com/BurntSushi/toml"
-
-	"github.com/ecodeclub/notify-go/content"
-	"github.com/ecodeclub/notify-go/store/mysql"
-	"github.com/ecodeclub/notify-go/target"
+	"log"
+	"time"
 )
 
 var (
-	engine   = mysql.NewEngine(mysql.DBConfig{DriverName: "", Dsn: ""})
-	kafkaCfg = kafka.Config{}
+	kafkaCfg   kafka.Config
+	getui      ral.Resource
+	pushConfig push.Config
 )
+
+func init() {
+	// kafka配置
+	_, _ = toml.DecodeFile("./example/base/conf/kafka.toml", &kafkaCfg)
+
+	getui, _ = slice.Find[ral.Resource](
+		ral.NewService("./example/base/conf/ral.toml").Resources,
+		func(src ral.Resource) bool {
+			return src.Name == "getui"
+		})
+
+	pushConfig = push.Config{}
+
+	go serve()
+	<-time.After(2 * time.Second)
+}
 
 func serve() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	// 读取kafka配置
-	_, err := toml.DecodeFile("./conf/kafka.toml", &kafkaCfg)
-	if err != nil {
-		log.Fatal("kafka配置读取失败")
-	}
-
-	// 启动邮件发送的消费者
 	qSrv := kafka.NewKafka(kafkaCfg)
-	qSrv.Consume(ctx, email.NewEmailChannel(email.Config{}))
+	qSrv.Consume(ctx, push.NewPushChannel(pushConfig, ral.NewClient(getui)))
 }
 
 func main() {
-	// 邮件消息发送服务
-	go serve()
+	// 后续支持通过target服务获取发送对象
+	receivers := []notifier.Receiver{
+		{
+			Email:  "xxx@qq.com",
+			Phone:  "+8613111111111",
+			UserId: "2a4b74c682210299781c4a1b9b308c5e",
+		},
+	}
 
-	// 通过target服务获取发送对象
-	targetSrv := target.NewTargetService()
-	receivers := targetSrv.GetTarget(context.TODO(), 123)
+	// 后续支持通过content服务获取发送内容
+	msg := notifier.Content{
+		Title:     "测试一下一下下titile",
+		Data:      []byte("测试一下一下下content"),
+		ClickType: "none",
+	}
 
-	// 通过content服务获取发送内容
-	contentSrv := content.NewContentService(mysql.NewITemplateDAO(engine))
-	msg, _ := contentSrv.GetContent(context.TODO(), receivers, 123, nil)
+	// 同步push发送
+	sendPushSync(receivers, msg)
 
-	// 创建异步邮件发送队列
+	// 异步push发送
 	q := kafka.NewKafka(kafkaCfg)
-	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: email.NewEmailChannel(email.Config{})}
-
-	// 执行普通发送
-	n := notify_go.NewNotification(asyncChannel, receivers, msg)
-	_ = n.Send(context.TODO())
+	sendPushAsync(q, receivers, msg)
 
 	// 定时任务发送
+	triggerSend(q, receivers, msg)
+}
+
+func sendPushSync(recvs []notifier.Receiver, msg notifier.Content) {
+	// 同步发送
+	syncChannel := channel.SyncChannel{IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
+
+	n := notify_go.NewNotification(syncChannel, recvs, msg)
+	err := n.Send(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func sendPushAsync(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
+	// 异步发送
+	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
+	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+	err := n.Send(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func triggerSend(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
+	// 异步发送
+	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
+	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+
 	task := notify_go.NewTriggerTask(n, time.Now().Add(time.Minute))
 	task.Send(context.TODO())
 	<-task.Err
