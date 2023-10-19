@@ -11,8 +11,6 @@ require (
 	github.com/kevinburke/twilio-go v0.0.0-20221122012537-65f3dd7539e2
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.8.1
-	go.uber.org/zap v1.25.0
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	xorm.io/xorm v1.3.2
 )
 
@@ -47,7 +45,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.2.1 // indirect
-	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
