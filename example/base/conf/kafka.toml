@@ -1,40 +1,40 @@
-host = ["127.0.0.1:29092"]
+host = ["127.0.0.1:9092"]
 
-[topicMappings.sms]
+[topic_mappings.sms]
 strategy = "round-robin"
 group = "sms.group"
-[[topicMappings.sms.topic]]
+[[topic_mappings.sms.topics]]
 name = "sms.high"
 weight = 100
-[[topicMappings.sms.topic]]
+[[topic_mappings.sms.topics]]
 name = "sms.medium"
 weight = 100
-[[topicMappings.sms.topic]]
+[[topic_mappings.sms.topics]]
 name = "sms.low"
 weight = 100
 
-[topicMappings.email]
+[topic_mappings.email]
 strategy = "round-robin"
 group = "email.group"
-[[topicMappings.email.topic]]
+[[topic_mappings.email.topics]]
 name = "email.high"
 weight = 100
-[[topicMappings.email.topic]]
+[[topic_mappings.email.topics]]
 name = "email.medium"
 weight = 100
-[[topicMappings.email.topic]]
+[[topic_mappings.email.topics]]
 name = "email.low"
 weight = 100
 
-[topicMappings.push]
+[topic_mappings.push]
 strategy = "round-robin"
 group = "push.group"
-[[topicMappings.push.topic]]
+[[topic_mappings.push.topics]]
 name = "push.high"
 weight = 100
-[[topicMappings.push.topic]]
+[[topic_mappings.push.topics]]
 name = "push.medium"
 weight = 100
-[[topicMappings.push.topic]]
+[[topic_mappings.push.topics]]
 name = "push.low"
 weight = 100

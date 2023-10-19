@@ -5,7 +5,7 @@ import "context"
 type Delivery struct {
 	DeliveryID string
 	Receivers  []Receiver
-	Content    []byte
+	Content    Content
 }
 
 type IChannel interface {

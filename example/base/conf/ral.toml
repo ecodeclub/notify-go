@@ -1,0 +1,18 @@
+[[Resources]]
+    Name = "getui"
+    TimeOut = 1500 # ms
+    Retry = 2 # 请求失败后的重试次数
+    Protocol = "https" # 数据头协议, http / https / grpc
+    Converter = "json"  # 数据体格式, form / raw / json
+    [[Resources.Interface]]
+        Name = "Send"
+        Url = "/v2/{app_id}/push/single/cid"
+        Method = "POST"
+        Host = "restapi.getui.com"
+        Port = "443"
+    [[Resources.Interface]]
+        Name = "Auth"
+        Url = "/v2/{app_id}/auth"
+        Method = "POST"
+        Host = "restapi.getui.com"
+        Port = "443"

@@ -21,6 +21,7 @@ type TriggerTask struct {
 type CircleTask struct {
 	Err        chan error
 	CircleTime string
+	Deadline   string
 	*Notification
 }
 

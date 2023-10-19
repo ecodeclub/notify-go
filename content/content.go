@@ -17,7 +17,7 @@ type Service struct {
 
 type IContentService interface {
 	GetContent(ctx context.Context, receivers []notifier.Receiver, templateId uint64,
-		variable map[string]interface{}) ([]byte, error)
+		variable map[string]interface{}) (notifier.Content, error)
 }
 
 func NewContentService(td mysql.ITemplateDAO) IContentService {
@@ -27,8 +27,8 @@ func NewContentService(td mysql.ITemplateDAO) IContentService {
 }
 
 func (s *Service) GetContent(ctx context.Context, receivers []notifier.Receiver, templateId uint64,
-	variable map[string]interface{}) ([]byte, error) {
-	var cont []byte
+	variable map[string]interface{}) (notifier.Content, error) {
+	var cont notifier.Content
 
 	tpl, err := s.tDAO.GetTContent(templateId, "")
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Service) GetContent(ctx context.Context, receivers []notifier.Receiver,
 }
 
 func (s *Service) renderContent(ctx context.Context, tpl string,
-	variable map[string]interface{}) ([]byte, error) {
-	var cont []byte
+	variable map[string]interface{}) (notifier.Content, error) {
+	var cont notifier.Content
 	return cont, nil
 }
