@@ -27,7 +27,7 @@ cp $SOURCE_PUSH $TARGET_PUSH
 
 # add permission to TARGET_PUSH and TARGET_COMMIT file.
 test -x $TARGET_PUSH || chmod +x $TARGET_PUSH
-test -x $TARGET_COMMIT || chmod +x $TARGET_COMMIT
+#test -x $TARGET_COMMIT || chmod +x $TARGET_COMMIT
 
 echo "安装 golangci-lint..."
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
