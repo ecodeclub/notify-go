@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/BurntSushi/toml"
 	"github.com/ecodeclub/ekit/slice"
-	notify_go "github.com/ecodeclub/notify-go"
+	notifygo "github.com/ecodeclub/notify-go"
 	"github.com/ecodeclub/notify-go/channel"
 	"github.com/ecodeclub/notify-go/channel/push"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
@@ -77,7 +77,7 @@ func sendPushSync(recvs []notifier.Receiver, msg notifier.Content) {
 	// 同步发送
 	syncChannel := channel.SyncChannel{IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
 
-	n := notify_go.NewNotification(syncChannel, recvs, msg)
+	n := notifygo.NewNotification(syncChannel, recvs, msg)
 	err := n.Send(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +87,7 @@ func sendPushSync(recvs []notifier.Receiver, msg notifier.Content) {
 func sendPushAsync(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
 	// 异步发送
 	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
-	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+	n := notifygo.NewNotification(asyncChannel, recvs, msg)
 	err := n.Send(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -97,9 +97,9 @@ func sendPushAsync(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Conte
 func triggerSend(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
 	// 异步发送
 	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
-	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+	n := notifygo.NewNotification(asyncChannel, recvs, msg)
 
-	task := notify_go.NewTriggerTask(n, time.Now().Add(time.Minute))
+	task := notifygo.NewTriggerTask(n, time.Now().Add(time.Minute))
 	task.Send(context.TODO())
 	<-task.Err
 }
