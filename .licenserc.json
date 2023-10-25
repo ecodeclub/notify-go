@@ -1,0 +1,5 @@
+{
+  "**/*.go": "// Copyright 2021 ecodeclub",
+  "**/*.{yml}": "# Copyright 2021 ecodeclub",
+  "**/*.sh": "# Copyright 2021 ecodeclub"
+}

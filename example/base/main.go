@@ -1,18 +1,33 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/BurntSushi/toml"
 	"github.com/ecodeclub/ekit/slice"
-	notify_go "github.com/ecodeclub/notify-go"
+	notifygo "github.com/ecodeclub/notify-go"
 	"github.com/ecodeclub/notify-go/channel"
 	"github.com/ecodeclub/notify-go/channel/push"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"github.com/ecodeclub/notify-go/pkg/ral"
 	"github.com/ecodeclub/notify-go/queue"
 	"github.com/ecodeclub/notify-go/queue/kafka"
-	"log"
-	"time"
 )
 
 var (
@@ -77,7 +92,7 @@ func sendPushSync(recvs []notifier.Receiver, msg notifier.Content) {
 	// 同步发送
 	syncChannel := channel.SyncChannel{IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
 
-	n := notify_go.NewNotification(syncChannel, recvs, msg)
+	n := notifygo.NewNotification(syncChannel, recvs, msg)
 	err := n.Send(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +102,7 @@ func sendPushSync(recvs []notifier.Receiver, msg notifier.Content) {
 func sendPushAsync(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
 	// 异步发送
 	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
-	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+	n := notifygo.NewNotification(asyncChannel, recvs, msg)
 	err := n.Send(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -97,9 +112,9 @@ func sendPushAsync(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Conte
 func triggerSend(q queue.IQueue, recvs []notifier.Receiver, msg notifier.Content) {
 	// 异步发送
 	asyncChannel := channel.AsyncChannel{Queue: q, IChannel: push.NewPushChannel(pushConfig, ral.NewClient(getui))}
-	n := notify_go.NewNotification(asyncChannel, recvs, msg)
+	n := notifygo.NewNotification(asyncChannel, recvs, msg)
 
-	task := notify_go.NewTriggerTask(n, time.Now().Add(time.Minute))
+	task := notifygo.NewTriggerTask(n, time.Now().Add(time.Minute))
 	task.Send(context.TODO())
 	<-task.Err
 }
