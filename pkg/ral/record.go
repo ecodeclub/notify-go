@@ -36,6 +36,7 @@ type Record struct {
 	timeCostPointLock sync.Mutex
 	field             map[string]any
 	fieldLock         sync.Mutex
+	CurlCmd           string
 }
 
 type StaticsItem struct {
@@ -97,7 +98,8 @@ func (lr *Record) Flush(l *slog.Logger) {
 		"host", lr.Host,
 		"retry", lr.retry,
 		"protocol", lr.Protocol,
-		"method", lr.Method)
+		"method", lr.Method,
+		"curl", lr.CurlCmd)
 
 	for name, sItem := range lr.timeCostSpan {
 		dura := sItem.GetDuration()

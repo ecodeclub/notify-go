@@ -7,10 +7,14 @@ require (
 	github.com/IBM/sarama v1.41.1
 	github.com/ecodeclub/ekit v0.0.8
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/kevinburke/twilio-go v0.0.0-20221122012537-65f3dd7539e2
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.8.1
+	github.com/stretchr/testify v1.8.4
+	go.uber.org/mock v0.3.0
+	moul.io/http2curl v1.0.0
 	xorm.io/xorm v1.3.2
 )
 
@@ -41,7 +45,9 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.2.1 // indirect
@@ -50,5 +56,6 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
 )

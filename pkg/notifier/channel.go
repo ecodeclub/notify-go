@@ -22,6 +22,7 @@ type Delivery struct {
 	Content    Content
 }
 
+//go:generate mockgen -package=mocks -destination=mocks/channel.mock.go -source=channel.go IChannel
 type IChannel interface {
 	Name() string
 	Execute(ctx context.Context, deli Delivery) error
