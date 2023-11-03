@@ -1,3 +1,17 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package notify_go
 
 import (
@@ -16,7 +30,7 @@ import (
 /*
 测试场景:
 1. 调用一次：超时、不超时没有返回error、不超时返回error
-2. 并发调用多次：一般不存在这种场景, 同一个TrigerTask只会调用一次, 不同的task间并发安全
+2. 并发调用多次：一般不存在这种场景, 同一个TriggerTask只会调用一次, 不同的task间并发安全
 */
 func TestTriggerTask_Send(t *testing.T) {
 	t.Parallel()
@@ -141,7 +155,7 @@ func TestCircleTask_fillCronTimes(t *testing.T) {
 		want []time.Time
 	}{
 		{
-			name: "every minute, 历史时间全部被过滤",
+			name: "every minute 历史时间全部被过滤",
 			args: args{
 				expr: "* * * * *",
 				begin: func() time.Time {
@@ -190,7 +204,7 @@ func TestCircleTask_fillCronTimes(t *testing.T) {
 			}(),
 		},
 		{
-			name: "every minte",
+			name: "every minute",
 			args: args{
 				expr: "* * * * *",
 				begin: func() time.Time {
