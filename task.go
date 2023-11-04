@@ -16,8 +16,9 @@ package notify_go
 
 import (
 	"context"
-	"log/slog"
 	"time"
+
+	"github.com/ecodeclub/notify-go/pkg/log"
 
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/notify-go/pkg/iterator"
@@ -49,8 +50,8 @@ type CircleTask struct {
 	EndTime       time.Time
 	HookBefore    func()
 	HookAfter     func()
-	CircleNum     uint64
-	CircleFailNum uint64
+	circleNum     uint64
+	circleFailNum uint64
 	*Notification
 }
 
@@ -128,11 +129,11 @@ func (ct *CircleTask) Send(ctx context.Context) {
 				break
 			}
 			<-time.After(time.Until(triggerPoint))
-			ct.CircleNum++
+			ct.circleNum++
 			err := ct.Notification.Send(context.TODO())
 			if err != nil {
-				ct.CircleFailNum++
-				slog.Error("circle task execute fail", "err", err)
+				ct.circleFailNum++
+				log.Default().Error("circle task execute fail", "err", err)
 			}
 		}
 	}

@@ -19,6 +19,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/ecodeclub/notify-go/pkg/log"
 )
 
 type Record struct {
@@ -89,7 +91,7 @@ func (s *StaticsItem) GetDuration() time.Duration {
 	return s.StopPoint.Sub(s.StartPoint)
 }
 
-func (lr *Record) Flush(l *slog.Logger) {
+func (lr *Record) Flush(l *log.Logger) {
 	field := make([]any, 0, 16)
 	field = append(field,
 		"code", lr.RspCode,
@@ -98,8 +100,7 @@ func (lr *Record) Flush(l *slog.Logger) {
 		"host", lr.Host,
 		"retry", lr.retry,
 		"protocol", lr.Protocol,
-		"method", lr.Method,
-		"curl", lr.CurlCmd)
+		"method", lr.Method)
 
 	for name, sItem := range lr.timeCostSpan {
 		dura := sItem.GetDuration()

@@ -17,13 +17,9 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
-	"sync"
-	"time"
-
-	"github.com/ecodeclub/notify-go/pkg/log"
 
 	"github.com/IBM/sarama"
+	"github.com/ecodeclub/notify-go/pkg/log"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 )
 
@@ -67,42 +63,27 @@ func (k *Kafka) Produce(ctx context.Context, c notifier.IChannel, delivery notif
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewAsyncProducer(k.Config.Hosts, config)
 	if err != nil {
-		slog.Error("[mq] 创建生产者出错", "err", err)
+		logger.Error("创建生产者出错", "err", err)
+		return err
 	}
 	defer producer.AsyncClose()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-producer.Successes()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-producer.Errors()
-	}()
 
 	// 根据channel类型，和路由策略选取发送的topic
 	topic, err := k.topicBalancer[c.Name()].GetNext()
 	if err != nil {
-		logger.Error("[Producer] choose topic fail", "channel", c.Name(), "err", err)
+		logger.Error("选择发送topic失败", "channel", c.Name(), "err", err)
+		return err
 	}
 
 	// 序列化data
 	data, _ := json.Marshal(delivery)
-	saramaMsg := &sarama.ProducerMessage{Topic: topic.Name, Key: nil, Value: sarama.ByteEncoder(data)}
+	producer.Input() <- &sarama.ProducerMessage{Topic: topic.Name, Key: nil, Value: sarama.ByteEncoder(data)}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*10)
 	select {
-	case producer.Input() <- saramaMsg:
-		logger.Info("[mq] 发送消息成功")
-	case <-ctx.Done():
-		logger.Warn("[mq] 发送消息超时")
+	case <-producer.Successes():
+	case msgErr := <-producer.Errors():
+		logger.Error("发送kafka消息失败", "msgErr", msgErr)
 	}
-	cancel()
-	wg.Wait()
 
 	return nil
 }
@@ -111,7 +92,7 @@ func (k *Kafka) Consume(ctx context.Context, c notifier.IChannel) {
 	logger := log.FromContext(ctx)
 	consumer, err := k.newConsumer(c.Name())
 	if err != nil {
-		logger.Error("[kafka] 消费者启动失败", "err", err)
+		logger.Error("消费者启动失败", "err", err)
 	}
 
 	for {
@@ -165,7 +146,7 @@ func (k *Kafka) WrapSaramaHandler(ctx context.Context, executor notifier.IChanne
 }
 
 type ConsumeWrapper struct {
-	logger   *slog.Logger
+	logger   *log.Logger
 	Executor notifier.IChannel
 }
 
@@ -176,7 +157,9 @@ func (c *ConsumeWrapper) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		if err != nil {
 			c.logger.Error("[consumer] unmarshal task detail fail", "err", err)
 		}
-		err = c.Executor.Execute(context.TODO(), delivery)
+
+		ctx := c.logger.WithContext(context.Background())
+		err = c.Executor.Execute(ctx, delivery)
 		if err != nil {
 			c.logger.Error("[consumer] 执行消息发送失败",
 				"topic", msg.Topic, "partition", msg.Partition, "offset", msg.Offset, "err", err)

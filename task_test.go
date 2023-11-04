@@ -138,7 +138,7 @@ func TestCircleTask_Send(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
 			defer cancel()
 			ct.Send(ctx)
-			assert.Equal(t, tt.wantCnt, ct.CircleNum)
+			assert.Equal(t, tt.wantCnt, ct.circleNum)
 		})
 	}
 }
