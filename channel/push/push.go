@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ecodeclub/notify-go/pkg/log"
+
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
 	"github.com/ecodeclub/notify-go/pkg/ral"
@@ -81,6 +83,8 @@ func NewPushChannel(c Config, client ral.Client) *ChannelPushImpl {
 }
 
 func (pc *ChannelPushImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
+	var logger = log.FromContext(ctx)
+
 	token, err := pc.getToken(ctx)
 	if err != nil {
 		return err
@@ -110,6 +114,7 @@ func (pc *ChannelPushImpl) Execute(ctx context.Context, deli notifier.Delivery) 
 	var resp map[string]any
 	err = pc.client.Ral(ctx, "Send", req, &resp, map[string]any{})
 
+	logger.Auto("res", err, "resp", resp)
 	return err
 }
 
@@ -118,7 +123,11 @@ func (pc *ChannelPushImpl) Name() string {
 }
 
 func (pc *ChannelPushImpl) getToken(ctx context.Context) (token string, err error) {
+	var logger = log.FromContext(ctx)
+
 	ts, sign := pc.getSign()
+	logger.Debug("get sign", "timestamp", ts, "sign", sign)
+
 	req := ral.Request{
 		Header: map[string]string{"content-type": "application/json;charset=utf-8"},
 		Body: map[string]interface{}{
@@ -140,6 +149,8 @@ func (pc *ChannelPushImpl) getToken(ctx context.Context) (token string, err erro
 	if !ok {
 		err = errors.New("[push] 获取token失败")
 	}
+
+	logger.Debug("get token", "token", token)
 	return
 }
 

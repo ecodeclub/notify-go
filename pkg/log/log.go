@@ -16,21 +16,79 @@ package log
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"os"
+
+	"github.com/pborman/uuid"
 )
 
-type ContextLogKey struct{}
+type (
+	ContextLogKey struct{}
+	LogIDKey      struct{}
+)
 
-func FromContext(ctx context.Context) *slog.Logger {
-	if l, ok := ctx.Value(ContextLogKey{}).(*slog.Logger); ok {
+func FromContext(ctx context.Context) *Logger {
+	if l, ok := ctx.Value(ContextLogKey{}).(*Logger); ok {
 		return l
 	}
-	return slog.Default()
+	return Default()
 }
 
-func WithContext(ctx context.Context, l *slog.Logger) context.Context {
-	if _, ok := ctx.Value(ContextLogKey{}).(*slog.Logger); ok {
+type Logger struct {
+	*slog.Logger
+}
+
+func Default() *Logger {
+	l := newLogger(os.Stdout, slog.LevelInfo)
+	l.Logger = l.Logger.With("LOGID", uuid.NewUUID().String())
+	return l
+}
+
+func New() *Logger {
+	return newLogger(os.Stdout, slog.LevelInfo)
+}
+
+func newLogger(w io.Writer, level slog.Level) *Logger {
+	l := &Logger{
+		Logger: slog.New(
+			slog.NewTextHandler(w, &slog.HandlerOptions{
+				AddSource: false,
+				Level:     level,
+			}),
+		),
+	}
+	return l
+}
+
+func (l *Logger) WithContext(ctx context.Context) context.Context {
+	if _, ok := ctx.Value(ContextLogKey{}).(*Logger); ok {
 		return ctx
 	}
 	return context.WithValue(ctx, ContextLogKey{}, l)
+}
+
+func (l *Logger) Auto(msg string, err error, args ...any) {
+	if err != nil {
+		l.Error(msg, append(args, "err", err.Error())...)
+		return
+	}
+	l.Info(msg, append(args, "err", nil)...)
+}
+
+func (l *Logger) WithFields(args ...any) *Logger {
+	return &Logger{Logger: l.Logger.With(args...)}
+}
+
+func (l *Logger) WithLogID(ctx context.Context) *Logger {
+	var (
+		logId string
+		ok    bool
+	)
+	logId, ok = ctx.Value(LogIDKey{}).(string)
+	if !ok {
+		logId = uuid.NewUUID().String()
+	}
+
+	return &Logger{Logger: l.Logger.With("LOGID", logId)}
 }

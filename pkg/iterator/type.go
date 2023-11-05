@@ -12,18 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notifier
+package iterator
 
-import "context"
-
-type Delivery struct {
-	DeliveryID string
-	Receivers  []Receiver
-	Content    Content
-}
-
-//go:generate mockgen -package=mocks -destination=mocks/channel.mock.go -source=channel.go IChannel
-type IChannel interface {
-	Name() string
-	Execute(ctx context.Context, deli Delivery) error
+type Iterable[T any] interface {
+	Next() (T, bool)
 }

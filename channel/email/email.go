@@ -17,8 +17,11 @@ package email
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/smtp"
+
+	"github.com/ecodeclub/notify-go/pkg/log"
 
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/notify-go/pkg/notifier"
@@ -58,7 +61,10 @@ func NewEmailChannel(cfg Config) *ChannelEmailImpl {
 }
 
 func (c *ChannelEmailImpl) Execute(ctx context.Context, deli notifier.Delivery) error {
-	var err error
+	var (
+		err    error
+		logger = log.FromContext(ctx)
+	)
 	msgContent := c.initEmailContent(deli.Content)
 
 	c.email.To = slice.Map[notifier.Receiver, string](deli.Receivers, func(idx int, src notifier.Receiver) string {
@@ -72,6 +78,7 @@ func (c *ChannelEmailImpl) Execute(ctx context.Context, deli notifier.Delivery) 
 	c.email.HTML = []byte(msgContent.Html)
 	c.email.Text = []byte(msgContent.Text)
 
+	logger.Info("email execute", "params", fmt.Sprintf("to[%v], from[%s]", c.email.To, c.email.From))
 	ch := make(chan struct{})
 	go func() {
 		defer func() {
@@ -85,9 +92,11 @@ func (c *ChannelEmailImpl) Execute(ctx context.Context, deli notifier.Delivery) 
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
+		logger.Error("email execute err", "err", err.Error())
 	case <-ch:
 		if err != nil {
 			err = errors.Wrap(err, "failed to send mail")
+			logger.Error("email execute err", "err", err.Error())
 		}
 	}
 

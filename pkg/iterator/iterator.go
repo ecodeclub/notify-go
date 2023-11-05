@@ -12,18 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notifier
+package iterator
 
-import "context"
-
-type Delivery struct {
-	DeliveryID string
-	Receivers  []Receiver
-	Content    Content
+type ListIter[T []E, E any] struct {
+	val    T
+	length int
+	index  int
 }
 
-//go:generate mockgen -package=mocks -destination=mocks/channel.mock.go -source=channel.go IChannel
-type IChannel interface {
-	Name() string
-	Execute(ctx context.Context, deli Delivery) error
+var _ Iterable[any] = &ListIter[[]any, any]{}
+
+func (it *ListIter[T, E]) Next() (E, bool) {
+	var e E
+	if it.index >= it.length {
+		return e, true
+	}
+	res := it.val[it.index]
+	it.index++
+	return res, false
+}
+
+func NewListIter[T []E, E any](array T) *ListIter[T, E] {
+	if array == nil {
+		return &ListIter[T, E]{}
+	}
+	return &ListIter[T, E]{
+		val:    array,
+		length: len(array),
+		index:  0,
+	}
 }

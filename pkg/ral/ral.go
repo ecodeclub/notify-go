@@ -17,58 +17,101 @@ package ral
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/ecodeclub/ekit/bean/option"
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/notify-go/pkg/log"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
+	"moul.io/http2curl"
 )
+
+type File resty.File
 
 type Client struct {
 	Service Resource
+	Debug   bool
 }
 
-func NewClient(service Resource) Client {
-	return Client{service}
+func WithDebug(debug bool) option.Option[Client] {
+	return func(t *Client) {
+		t.Debug = debug
+	}
 }
 
 type Request struct {
-	Header     map[string]string
-	Query      map[string]string
-	Body       any
-	PathParams map[string]string
-	AuthScheme string
-	AuthToken  string
+	Header         map[string]string
+	Query          map[string]string
+	Body           any
+	FormData       map[string]string
+	PathParams     map[string]string
+	UploadFiles    []File
+	UploadFilePath map[string]string
+	AuthScheme     string
+	AuthToken      string
+	BasicUserName  string
+	BasicPassword  string
 }
 
-func (c Client) Ral(ctx context.Context, name string, req Request, respSucc any, respFail any) error {
+func NewClient(service Resource, opts ...option.Option[Client]) Client {
+	c := Client{Service: service}
+	option.Apply[Client](&c, opts...)
+	return c
+}
+
+func (c Client) Ral(ctx context.Context, name string, req Request, respSuc any, respFail any) error {
 	var lr = NewLogRecord()
 	logger := log.FromContext(ctx)
 	defer lr.Flush(logger)
 
-	intf, ok := c.getUrl(name)
+	urlInfo, ok := slice.Find[Interface](c.Service.Interface, func(src Interface) bool {
+		return src.Name == name
+	})
 	if !ok {
 		return errors.New("[ral] 获取接口配置失败")
 	}
 
-	lr.Host = intf.Host
-	lr.Port = intf.Port
+	lr.Host = urlInfo.Host
+	lr.Port = urlInfo.Port
 	lr.Protocol = c.Service.Protocol
-	lr.Url = intf.URL
-	lr.Method = intf.Method
+	lr.Url = urlInfo.URL
+	lr.Method = urlInfo.Method
 
-	rc := resty.New().EnableTrace().SetRetryCount(c.Service.Retry)
-	rc.SetBaseURL(fmt.Sprintf("%s://%s:%s", c.Service.Protocol, intf.Host, intf.Port))
+	rc := resty.New().EnableTrace().SetDebug(c.Debug).SetRetryCount(c.Service.Retry)
+	rc.SetPreRequestHook(
+		func(client *resty.Client, request *http.Request) error {
+			command, err := http2curl.GetCurlCommand(request)
+			logger.Info("", "curl", command)
+			lr.CurlCmd = command.String()
+			return err
+		})
+	rc.SetBaseURL(fmt.Sprintf("%s://%s:%s", c.Service.Protocol, urlInfo.Host, urlInfo.Port))
 
 	client := rc.R().SetContext(ctx).
 		SetHeaders(req.Header).
 		SetQueryParams(req.Query).
-		SetBody(req.Body).
-		SetResult(respSucc).
+		SetBody(req.Body).         // json data
+		SetFormData(req.FormData). // form data
+		SetResult(respSuc).
 		SetError(respFail).
 		SetPathParams(req.PathParams).
-		SetAuthScheme(req.AuthScheme).SetAuthToken(req.AuthToken)
+		SetAuthScheme(req.AuthScheme).SetAuthToken(req.AuthToken).
+		SetBasicAuth(req.BasicUserName, req.BasicPassword)
 
-	rsp, err := client.Execute(intf.Method, intf.URL)
+	//通过文件流上传
+	if len(req.UploadFiles) != 0 {
+		for _, f := range req.UploadFiles {
+			client.SetFileReader(f.ParamName, f.Name, f.Reader)
+		}
+	}
+
+	//通过文件path上传
+	if req.UploadFilePath != nil {
+		client.SetFiles(req.UploadFilePath)
+	}
+
+	rsp, err := client.Execute(urlInfo.Method, urlInfo.URL)
 	lr.RspCode = rsp.StatusCode()
 	lr.Error = rsp.Error()
 
@@ -82,14 +125,4 @@ func (c Client) Ral(ctx context.Context, name string, req Request, respSucc any,
 	lr.AddTimeCostPoint("tls_handshake", trace.TLSHandshake)
 
 	return err
-}
-
-func (c Client) getUrl(name string) (Interface, bool) {
-	intf := Interface{}
-	for _, it := range c.Service.Interface {
-		if it.Name == name {
-			return it, true
-		}
-	}
-	return intf, false
 }

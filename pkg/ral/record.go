@@ -19,6 +19,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/ecodeclub/notify-go/pkg/log"
 )
 
 type Record struct {
@@ -36,6 +38,7 @@ type Record struct {
 	timeCostPointLock sync.Mutex
 	field             map[string]any
 	fieldLock         sync.Mutex
+	CurlCmd           string
 }
 
 type StaticsItem struct {
@@ -88,7 +91,7 @@ func (s *StaticsItem) GetDuration() time.Duration {
 	return s.StopPoint.Sub(s.StartPoint)
 }
 
-func (lr *Record) Flush(l *slog.Logger) {
+func (lr *Record) Flush(l *log.Logger) {
 	field := make([]any, 0, 16)
 	field = append(field,
 		"code", lr.RspCode,
